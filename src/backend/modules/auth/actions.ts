@@ -39,6 +39,20 @@ export async function signupAction(
     await tx.warehouse.create({
       data: { companyId: company.id, name: "Main Store", isDefault: true },
     });
+    if (tpl.customFields.length > 0) {
+      await tx.customFieldDefinition.createMany({
+        data: tpl.customFields.map((f, i) => ({
+          companyId: company.id,
+          entity: f.entity,
+          key: f.key,
+          label: f.label,
+          type: f.type,
+          options: f.options,
+          showInList: f.showInList ?? false,
+          sortOrder: i,
+        })),
+      });
+    }
     return { user, company };
   });
 

@@ -38,21 +38,35 @@ enum MovementType {
   RETURN_OUT
 }
 
+enum CustomFieldEntity {
+  CONTACT
+  ITEM
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  BOOLEAN
+}
+
 model Company {
-  id         String       @id @default(cuid())
-  name       String
-  template   String       @default("custom") // lights | grocery | medical | custom
-  currency   String       @default("INR")
-  country    String       @default("IN")
-  taxId      String?      // GSTIN etc.
-  settings   Json         @default("{}")
-  createdAt  DateTime     @default(now())
-  members    Membership[]
-  contacts   Contact[]
-  items      Item[]
-  warehouses Warehouse[]
-  movements  StockMovement[]
-  audits     AuditLog[]
+  id           String                  @id @default(cuid())
+  name         String
+  template     String                  @default("custom") // lights | grocery | medical | custom
+  currency     String                  @default("INR")
+  country      String                  @default("IN")
+  taxId        String? // GSTIN etc.
+  settings     Json                    @default("{}")
+  createdAt    DateTime                @default(now())
+  members      Membership[]
+  contacts     Contact[]
+  items        Item[]
+  warehouses   Warehouse[]
+  movements    StockMovement[]
+  audits       AuditLog[]
+  customFields CustomFieldDefinition[]
 }
 
 model User {
@@ -78,47 +92,70 @@ model Membership {
   @@index([companyId])
 }
 
+// A field a business adds to its own Contacts or Items.
+// Never deleted, only hidden (isActive = false), so old data is not lost.
+// The values live in the customFields JSON column of each record, under `key`.
+model CustomFieldDefinition {
+  id         String            @id @default(cuid())
+  companyId  String
+  company    Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  entity     CustomFieldEntity
+  key        String // stable id used inside the JSON, e.g. "wattage" (never changes)
+  label      String // what the user sees, e.g. "Wattage" (can be renamed)
+  type       CustomFieldType
+  options    Json? // for SELECT: ["Warm White","Cool White"]
+  isRequired Boolean           @default(false)
+  showInList Boolean           @default(false)
+  sortOrder  Int               @default(0)
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@unique([companyId, entity, key])
+  @@index([companyId, entity, isActive])
+}
+
 model Contact {
-  id            String      @id @default(cuid())
-  companyId     String
-  company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  type          ContactType
-  name          String
-  code          String?
-  email         String?
-  phone         String?
-  taxId         String?
-  segment       String?     // e.g. dealer / retail / project (drives pricing)
-  creditLimit   Decimal     @default(0) @db.Decimal(14, 2)
-  address       Json?
-  customFields  Json        @default("{}")
-  isActive      Boolean     @default(true)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id           String      @id @default(cuid())
+  companyId    String
+  company      Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type         ContactType
+  name         String
+  code         String?
+  email        String?
+  phone        String?
+  taxId        String?
+  segment      String? // e.g. dealer / retail / project (drives pricing)
+  creditLimit  Decimal     @default(0) @db.Decimal(14, 2)
+  address      Json?
+  customFields Json        @default("{}")
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@unique([companyId, code])
   @@index([companyId, type])
 }
 
 model Item {
-  id           String   @id @default(cuid())
+  id           String          @id @default(cuid())
   companyId    String
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  type         ItemType @default(FINISHED)
+  company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type         ItemType        @default(FINISHED)
   sku          String
   name         String
-  unit         String   @default("pcs")
+  unit         String          @default("pcs")
   category     String?
   hsn          String?
-  taxRate      Decimal  @default(0) @db.Decimal(5, 2)
-  salePrice    Decimal  @default(0) @db.Decimal(14, 2)
-  costPrice    Decimal  @default(0) @db.Decimal(14, 4)
-  reorderLevel Decimal  @default(0) @db.Decimal(14, 3)
-  trackBatch   Boolean  @default(false)
-  customFields Json     @default("{}") // template fields: wattage, cct, expiry...
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  taxRate      Decimal         @default(0) @db.Decimal(5, 2)
+  salePrice    Decimal         @default(0) @db.Decimal(14, 2)
+  costPrice    Decimal         @default(0) @db.Decimal(14, 4)
+  reorderLevel Decimal         @default(0) @db.Decimal(14, 3)
+  trackBatch   Boolean         @default(false)
+  customFields Json            @default("{}") // template fields: wattage, cct, expiry...
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
   movements    StockMovement[]
 
   @@unique([companyId, sku])
@@ -126,11 +163,11 @@ model Item {
 }
 
 model Warehouse {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   companyId String
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company   Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name      String
-  isDefault Boolean  @default(false)
+  isDefault Boolean         @default(false)
   movements StockMovement[]
 
   @@unique([companyId, name])
@@ -150,7 +187,7 @@ model StockMovement {
   quantity       Decimal      @db.Decimal(14, 3)
   unitCost       Decimal?     @db.Decimal(14, 4)
   batchNo        String?
-  refType        String?      // purchase | production | sale ...
+  refType        String? // purchase | production | sale ...
   refId          String?
   idempotencyKey String?
   note           String?
