@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { prisma } from "../database/db";
 
 const key = new TextEncoder().encode(process.env.AUTH_SECRET);
@@ -25,7 +26,8 @@ export async function createSession(
   });
 }
 
-export async function getSession() {
+// cache() makes this run once per request, even if layout, page and actions all call it.
+export const getSession = cache(async () => {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   try {
@@ -44,7 +46,7 @@ export async function getSession() {
   } catch {
     return null;
   }
-}
+});
 
 export async function destroySession() {
   (await cookies()).delete(COOKIE);

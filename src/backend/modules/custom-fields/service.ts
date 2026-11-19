@@ -1,5 +1,5 @@
-import type { CustomFieldEntity } from "@prisma/client";
-import { db } from "@/backend/database/db";
+import { Prisma, type CustomFieldEntity } from "@prisma/client";
+import { db, prisma } from "@/backend/database/db";
 import {
   createFieldSchema,
   updateFieldSchema,
@@ -22,6 +22,13 @@ export async function listFields(
 ) {
   return db(companyId).customFieldDefinition.findMany({
     where: { entity, ...(opts.includeHidden ? {} : { isActive: true }) },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+// Both entities, hidden included, in one query (used by the settings page).
+export async function listAllFields(companyId: string) {
+  return db(companyId).customFieldDefinition.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 }
@@ -96,18 +103,24 @@ export async function setFieldActive(
   if (res.count === 0) throw new Error("Field not found.");
 }
 
+// One database call, scoped to this company and entity.
 export async function reorderFields(
   companyId: string,
   entity: CustomFieldEntity,
   orderedIds: string[]
 ) {
-  const client = db(companyId);
-  for (let i = 0; i < orderedIds.length; i++) {
-    await client.customFieldDefinition.updateMany({
-      where: { id: orderedIds[i], entity },
-      data: { sortOrder: i },
-    });
-  }
+  if (orderedIds.length === 0) return;
+  const rows = Prisma.join(
+    orderedIds.map((id, i) => Prisma.sql`(${id}::text, ${i}::int)`)
+  );
+  await prisma.$executeRaw`
+    UPDATE "CustomFieldDefinition" AS f
+    SET "sortOrder" = v.pos
+    FROM (VALUES ${rows}) AS v(id, pos)
+    WHERE f.id = v.id
+      AND f."companyId" = ${companyId}
+      AND f.entity = ${entity}::"CustomFieldEntity"
+  `;
 }
 
 export type CustomValues = Record<string, string | number | boolean | null>;
