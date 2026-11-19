@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { prisma } from "./db";
+import { prisma } from "../database/db";
 
 const key = new TextEncoder().encode(process.env.AUTH_SECRET);
 const COOKIE = "moppo_session";
