@@ -5,7 +5,6 @@ import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
 import { Label } from "@/frontend/components/ui/label";
 import {
-  applyTemplateFieldsAction,
   createFieldAction,
   reorderFieldsAction,
   setFieldActiveAction,
@@ -175,9 +174,9 @@ function FieldForm({
   );
 }
 
-type Props = { fields: FieldRow[]; missingCount: number };
+type Props = { fields: FieldRow[] };
 
-export function CustomFieldsManager({ fields, missingCount }: Props) {
+export function CustomFieldsManager({ fields }: Props) {
   // Local copy so clicks feel instant. It re-syncs whenever the server sends new data.
   const [list, setList] = useState<FieldRow[]>(fields);
   useEffect(() => setList(fields), [fields]);
@@ -191,7 +190,7 @@ export function CustomFieldsManager({ fields, missingCount }: Props) {
   const active = mine.filter((f) => f.isActive);
   const hidden = mine.filter((f) => !f.isActive);
 
-  // For slower actions (add, edit, apply template): wait for the server, then close the form.
+  // For slower actions (add, edit): wait for the server, then close the form.
   function run(fn: () => Promise<FieldResult>, done?: () => void) {
     startTransition(async () => {
       const res = await fn();
@@ -274,24 +273,6 @@ export function CustomFieldsManager({ fields, missingCount }: Props) {
 
   return (
     <div className="space-y-5">
-      {missingCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed p-4">
-          <p className="text-sm">
-            Your business type has {missingCount} ready-made field
-            {missingCount === 1 ? "" : "s"} you have not added yet.
-          </p>
-          <Button
-            size="sm"
-            disabled={pending}
-            onClick={() => run(() => applyTemplateFieldsAction())}
-          >
-            {pending
-              ? "Adding..."
-              : `Add ${missingCount} template field${missingCount === 1 ? "" : "s"}`}
-          </Button>
-        </div>
-      )}
-
       <div className="flex gap-2 border-b">
         {(Object.keys(ENTITY_LABELS) as Entity[]).map((e) => (
           <button

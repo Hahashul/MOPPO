@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/backend/auth/permissions";
 import { entitySchema } from "./schema";
 import type { CreateFieldInput, UpdateFieldInput } from "./schema";
-import { applyTemplateFields } from "./apply-template";
 import {
   createField,
   reorderFields,
@@ -72,17 +71,6 @@ export async function reorderFieldsAction(
   try {
     const s = await requireRole(["OWNER", "ADMIN"]);
     await reorderFields(s.companyId, entitySchema.parse(entity), orderedIds);
-    return { ok: true };
-  } catch (e) {
-    return { error: message(e) };
-  }
-}
-
-export async function applyTemplateFieldsAction(): Promise<FieldResult> {
-  try {
-    const s = await requireRole(["OWNER", "ADMIN"]);
-    await applyTemplateFields(s.companyId);
-    revalidatePath(PATH);
     return { ok: true };
   } catch (e) {
     return { error: message(e) };

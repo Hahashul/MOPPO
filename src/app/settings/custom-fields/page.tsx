@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/backend/auth/session";
-import { getCustomFieldsPageData } from "@/backend/modules/custom-fields/apply-template";
+import { listAllFields } from "@/backend/modules/custom-fields/service";
 import {
   CustomFieldsManager,
   type FieldRow,
@@ -11,9 +11,7 @@ export default async function CustomFieldsPage() {
   if (!session) redirect("/login");
   if (session.role === "STAFF") redirect("/dashboard");
 
-  const { fields: raw, missingCount } = await getCustomFieldsPageData(
-    session.companyId
-  );
+  const raw = await listAllFields(session.companyId);
 
   const fields: FieldRow[] = raw.map((f) => ({
     id: f.id,
@@ -36,7 +34,7 @@ export default async function CustomFieldsPage() {
           its saved data safe.
         </p>
       </div>
-      <CustomFieldsManager fields={fields} missingCount={missingCount} />
+      <CustomFieldsManager fields={fields} />
     </div>
   );
 }

@@ -6,9 +6,7 @@ import { Button } from "@/frontend/components/ui/button";
 import { Input } from "@/frontend/components/ui/input";
 import { Label } from "@/frontend/components/ui/label";
 
-type Props = { templates: { id: string; label: string }[] };
-
-export function SignupForm({ templates }: Props) {
+export function SignupForm() {
   const [state, action, pending] = useActionState(signupAction, undefined);
 
   return (
@@ -28,21 +26,6 @@ export function SignupForm({ templates }: Props) {
       <div className="space-y-2">
         <Label htmlFor="companyName">Company name</Label>
         <Input id="companyName" name="companyName" required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="template">Business type</Label>
-        <select
-          id="template"
-          name="template"
-          defaultValue="lights"
-          className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-        >
-          {templates.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
       </div>
       {state?.error && <p className="text-sm text-red-500">{state.error}</p>}
       <Button type="submit" className="w-full" disabled={pending}>

@@ -1,14 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/backend/auth/session";
-import { templateList } from "@/backend/templates";
 import { SignupForm } from "@/frontend/features/auth/SignupForm";
 
 export default async function SignupPage() {
   const session = await getSession();
   if (session) redirect("/dashboard");
-
-  const templates = templateList.map((t) => ({ id: t.id, label: t.label }));
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
@@ -18,7 +15,7 @@ export default async function SignupPage() {
           Set up your business in a minute.
         </p>
       </div>
-      <SignupForm templates={templates} />
+      <SignupForm />
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href="/login" className="font-medium text-foreground underline">

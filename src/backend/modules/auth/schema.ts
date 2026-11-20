@@ -5,7 +5,6 @@ export const signupSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   companyName: z.string().trim().min(2, "Enter your company name"),
-  template: z.string(),
 });
 
 export const loginSchema = z.object({

@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/backend/database/db";
 import { createSession, destroySession } from "@/backend/auth/session";
-import { getTemplate } from "@/backend/templates";
 import { loginSchema, signupSchema } from "./schema";
 
 export type FormState = { error?: string } | undefined;
@@ -20,39 +19,22 @@ export async function signupAction(
   const parsed = signupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  const { name, email, password, companyName, template } = parsed.data;
+  const { name, email, password, companyName } = parsed.data;
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return { error: "An account with this email already exists." };
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const tpl = getTemplate(template);
 
   const { user, company } = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({ data: { name, email, passwordHash } });
-    const company = await tx.company.create({
-      data: { name: companyName, template: tpl.id, settings: tpl.settings },
-    });
+    const company = await tx.company.create({ data: { name: companyName } });
     await tx.membership.create({
       data: { userId: user.id, companyId: company.id, role: "OWNER" },
     });
     await tx.warehouse.create({
       data: { companyId: company.id, name: "Main Store", isDefault: true },
     });
-    if (tpl.customFields.length > 0) {
-      await tx.customFieldDefinition.createMany({
-        data: tpl.customFields.map((f, i) => ({
-          companyId: company.id,
-          entity: f.entity,
-          key: f.key,
-          label: f.label,
-          type: f.type,
-          options: f.options,
-          showInList: f.showInList ?? false,
-          sortOrder: i,
-        })),
-      });
-    }
     return { user, company };
   });
 

@@ -20,13 +20,6 @@ enum ContactType {
   BOTH
 }
 
-enum ItemType {
-  RAW_MATERIAL
-  SEMI_FINISHED
-  FINISHED
-  SERVICE
-}
-
 enum MovementType {
   PURCHASE_IN
   PRODUCTION_OUT
@@ -63,6 +56,8 @@ model Company {
   members      Membership[]
   contacts     Contact[]
   items        Item[]
+  itemKinds    ItemKind[]
+  units        Unit[]
   warehouses   Warehouse[]
   movements    StockMovement[]
   audits       AuditLog[]
@@ -115,6 +110,43 @@ model CustomFieldDefinition {
   @@index([companyId, entity, isActive])
 }
 
+// Item type, editable by the business (Raw material, Finished light, ...).
+// The four flags drive stock, purchase, sales and recipe logic.
+// Hidden (isActive = false), never deleted.
+model ItemKind {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  tracksStock Boolean  @default(true)
+  canBuy      Boolean  @default(false)
+  canSell     Boolean  @default(false)
+  canBeInBom  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  items       Item[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+}
+
+// Unit of measure, editable by the business (pcs, set, mtr, ...).
+// Hidden, never deleted.
+model Unit {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String // short name stored on items, e.g. "pcs"
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+}
+
 model Contact {
   id           String      @id @default(cuid())
   companyId    String
@@ -141,7 +173,8 @@ model Item {
   id           String          @id @default(cuid())
   companyId    String
   company      Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  type         ItemType        @default(FINISHED)
+  kindId       String
+  kind         ItemKind        @relation(fields: [kindId], references: [id], onDelete: Restrict)
   sku          String
   name         String
   unit         String          @default("pcs")
@@ -159,7 +192,7 @@ model Item {
   movements    StockMovement[]
 
   @@unique([companyId, sku])
-  @@index([companyId, type])
+  @@index([companyId, kindId])
 }
 
 model Warehouse {
